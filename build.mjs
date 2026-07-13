@@ -31,7 +31,7 @@ const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(
 //   englishOnly: true   keep only English-language titles (expat audience)
 
 const STRONG_DE =
-  /werkstudent|praktik|absolvent|mitarbeiter|kaufmann|kauffrau|berater|entwickler|vertrieb|referent|fachkraft|ausbild|auszubild|ingenieur|steuerfach|pflege|erzieh|verkäufer|verkaeufer|buchhalt|einkäufer|leiter\b|kraft\b|helfer|meister\b|gutachter|zahlungsverkehr|banksteuerung|bauleitung|immobilien|betriebswirt|\bdein\b|\bfür\b|\bund\b|\bim\b|\bbereich\b|einstieg/i;
+  /werkstudent|praktik|absolvent|mitarbeiter|kaufmann|kauffrau|berater|entwickler|vertrieb|referent|fachkraft|ausbild|auszubild|ingenieur|steuerfach|pflege|erzieh|verkäufer|verkaeufer|buchhalt|einkäufer|leiter\b|kraft\b|helfer|meister\b|gutachter|zahlungsverkehr|banksteuerung|bauleitung|immobilien|betriebswirt|\bdein\b|\bfür\b|\bund\b|\bim\b|\bbereich\b|einstieg|steuer|vertrag|standort|kenntniss|erfahrung|deutsch|bereich|abteilung|gruppe|wirtschaft|recht|gesundheit|verwaltung|technik\b|planung|beratung|betreu|förder|prüf|sachbearbeit/i;
 const EN_TOKEN =
   /\b(intern|internship|working student|graduate|trainee|junior|senior|engineer|developer|manager|analyst|specialist|scientist|designer|consultant|lead|associate|marketing|sales|product|business|operations|finance|people|talent|success|growth|partnerships|account|customer|data|software|devops|cloud|security|content|research|strategy|recruiter|writer|copywriter|coordinator)\b/i;
 
@@ -40,10 +40,13 @@ const EN_TOKEN =
 // ((m/f/d), (x/f/m)). Presence of the m/w pair means the listing itself is German.
 const DE_GENDER = /\bm\s*\/\s*w\b|\bw\s*\/\s*m\b/i;
 
-function isEnglishTitle(title) {
+function isEnglishTitle(title, allowGenderMarker) {
   if (/[äöüß]/.test(title)) return false; // umlaut => German
-  if (STRONG_DE.test(title)) return false; // strong German job noun
-  if (DE_GENDER.test(title)) return false; // German weiblich gender marker
+  if (STRONG_DE.test(title)) return false; // strong German job noun / stopword
+  // The (m/w/d) marker is a German-language signal, but many DACH companies bolt it
+  // onto otherwise-English titles out of legal habit. Strict mode rejects it (max
+  // precision); loose mode keeps English titles that merely carry the marker.
+  if (!allowGenderMarker && DE_GENDER.test(title)) return false;
   return EN_TOKEN.test(title); // has a recognisable English job token
 }
 
@@ -55,7 +58,7 @@ function makeFilter(niche) {
     if (types && !types.has(r.type)) return false;
     if (any && !any.test(r.title)) return false;
     if (not && not.test(r.title)) return false;
-    if (niche.englishOnly && !isEnglishTitle(r.title)) return false;
+    if (niche.englishOnly && !isEnglishTitle(r.title, niche.allowGenderMarker)) return false;
     return true;
   };
 }
